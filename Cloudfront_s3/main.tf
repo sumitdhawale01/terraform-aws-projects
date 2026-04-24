@@ -55,6 +55,16 @@ module "cloudfront" {
   bucket_domain_name = module.dev_bucket.bucket_regional_domain_name
 }
 
+
+#lambda module
+module "lambda" {
+  source = "./modules/lambda"
+  filename = "lambda.zip"
+}
+
+
+
+
 # dev-stage Replication module
 module "replication" {
   source = "./modules/replication"
@@ -187,3 +197,28 @@ resource "aws_s3_bucket_policy" "stage_bucket_policy" {
   })
 }
 
+######
+# lambda-s3-permissions
+######
+
+# Allow S3 to invoke Lambda
+resource "aws_lambda_permission" "this" {
+  statement_id  = "AllowExecutionFromS3"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda.lambda_name
+  principal     = "s3.amazonaws.com"
+
+  source_arn = module.dev_bucket.bucket_arn
+}
+
+# Trigger Lambda on upload
+resource "aws_s3_bucket_notification" "this" {
+  bucket = module.dev_bucket.bucket_id
+
+  lambda_function {
+    lambda_function_arn = module.lambda.lambda_arn
+    events              = ["s3:ObjectCreated:*"]
+  }
+
+  depends_on = [aws_lambda_permission.this]
+}
