@@ -39,8 +39,12 @@ resource "aws_s3_bucket_versioning" "this" {
 
  versioning_configuration {
    status = "Enabled"
- }
+ 
+#  depends_on = [
+#     aws_s3_bucket_replication_configuration.replication
+#   ]
 
+}
 }
 
 #lifecycle rule

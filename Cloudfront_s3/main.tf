@@ -10,7 +10,7 @@ module "dev_bucket" {
   source = "./modules/s3_bucket"
   bucket_name = "sumit-dhawale-sample-dev-bucket-111"
   environment = "dev"
-
+ 
   enable_logging  = true
   log_bucket = module.log_bucket.bucket_id
 
@@ -37,6 +37,7 @@ module "log_bucket" {
 
 }
 
+#iam user module
 module "iam_user" {
   source = "./modules/iam"
   bucket_arns = [
@@ -45,6 +46,13 @@ module "iam_user" {
 ]
  user_name = "dev-upload-user"
   
+}
+
+
+#cloudfront module
+module "cloudfront" {
+  source = "./modules/cloudfront"
+  bucket_domain_name = module.dev_bucket.bucket_regional_domain_name
 }
 
 # dev-stage Replication module
@@ -72,32 +80,34 @@ module "replication_stage_to_dev" {
 ################
 
 resource "aws_s3_bucket_policy" "dev_bucket_policy" {
+  depends_on = [module.cloudfront]
+
   bucket = module.dev_bucket.bucket_id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
 
-      # Bucket level permission
+      # IAM user access
       {
         Effect = "Allow"
+
         Principal = {
           AWS = module.iam_user.user_arn
         }
-        Action = "s3:ListBucket"
+        Action   = "s3:ListBucket"
         Resource = module.dev_bucket.bucket_arn
       },
-
-      # Object level permission
       {
         Effect = "Allow"
         Principal = {
           AWS = module.iam_user.user_arn
         }
-        Action = "s3:PutObject"
+        Action   = "s3:PutObject"
         Resource = "${module.dev_bucket.bucket_arn}/*"
       },
 
+      # Replication access
       {
         Effect = "Allow"
         Principal = {
@@ -108,6 +118,21 @@ resource "aws_s3_bucket_policy" "dev_bucket_policy" {
           "s3:ReplicateDelete"
         ]
         Resource = "${module.dev_bucket.bucket_arn}/*"
+      },
+
+      # ✅ CloudFront access (merged here)
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudfront.amazonaws.com"
+        }
+        Action   = "s3:GetObject"
+        Resource = "${module.dev_bucket.bucket_arn}/*"
+        Condition = {
+          StringEquals = {
+            "AWS:SourceArn" = module.cloudfront.distribution_arn
+          }
+        }
       }
 
     ]

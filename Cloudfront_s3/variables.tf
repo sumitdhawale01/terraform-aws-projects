@@ -7,3 +7,6 @@
 #   type = string
 #   default = null
 # }
+# variable "dev_bucket" {
+  
+# }
