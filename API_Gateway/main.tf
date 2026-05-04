@@ -38,7 +38,7 @@ module "lambda_validator" {
   role_arn = module.iam.lambda_role_arn
   table_name = module.dynamodb.table_name
   queue_url = module.sqs.queue_url
-  
+
 }
 module "lambda_processor" {
   source = "./modules/lambda_processor"
@@ -56,15 +56,6 @@ module "apigateway" {
   lambda_invoke_arn = module.lambda_validator.invoke_arn
 
 }
-
-
-
-# resource "aws_lambda_event_source_mapping" "sqs_trigger" {
-#   depends_on = [ module.lambda_processor ]
-#   event_source_arn = module.sqs.queue_arn
-#   function_name    = module.lambda_processor.function_name
-#   batch_size       = 1
-# }
 
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   event_source_arn = module.sqs.queue_arn
