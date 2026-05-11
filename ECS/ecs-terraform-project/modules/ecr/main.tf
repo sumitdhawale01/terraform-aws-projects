@@ -6,6 +6,8 @@ resource "aws_ecr_repository" "repo" {
     scan_on_push = true
   }
 
+  force_delete = true
+
   image_tag_mutability = "MUTABLE"
 
   tags = {
